@@ -8,6 +8,8 @@ import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
+import java.util.List; //imported list
+import java.util.Objects; //imported Objects
 import java.util.Optional;
 
 /**
@@ -17,7 +19,28 @@ import java.util.Optional;
 public final class MyGameStateFactory implements Factory<GameState> {
 	private final class MyGameState implements GameState {
 		// MyGameState class for implementing methods to update the gamestate by returning new gamestate
+		private GameSetup setup;
+		private ImmutableSet<Piece> remaining;
+		private ImmutableList<LogEntry> log;
+		private Player mrX;
+		private List<Player> detectives;
+		private ImmutableSet<Move> moves;
+		private ImmutableSet<Piece> winner;
 
+
+		private MyGameState(
+				final GameSetup setup,
+				final ImmutableSet<Piece> remaining,
+				final ImmutableList<LogEntry> log,
+				final Player mrX,
+				final List<Player> detectives){
+			this.setup = setup;
+			this.remaining = remaining;
+			this.log = log;
+			this.mrX = mrX;
+			this.detectives = detectives;
+
+		}
 		@Nonnull
 		@Override
 		public GameState advance(Move move) {
@@ -38,43 +61,50 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public GameSetup getSetup() {
-			return null;
+			return setup;
 		}
 
 		@Nonnull
 		@Override
 		public ImmutableSet<Piece> getPlayers() {
-			return null;
+			return remaining;
 		}
 
 		@Nonnull
 		@Override
 		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
+            /*for (Player player : detectives) {
+                if (detective.equals(player)) {
+                    return Optional.of(player.location());
+                }
+            } */
 			return Optional.empty();
 		}
 
 		@Nonnull
 		@Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+
+			//need to implement
 			return Optional.empty();
 		}
 
 		@Nonnull
 		@Override
 		public ImmutableList<LogEntry> getMrXTravelLog() {
-			return null;
+			return log;
 		}
 
 		@Nonnull
 		@Override
 		public ImmutableSet<Piece> getWinner() {
-			return null;
+			return winner;
 		}
 
 		@Nonnull
 		@Override
 		public ImmutableSet<Move> getAvailableMoves() {
-			return null;
+			return moves;
 		}
 	}
 
@@ -83,7 +113,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Player mrX,
 			ImmutableList<Player> detectives) {
 		// TODO
-		throw new RuntimeException("Implement me!");
+		Objects.requireNonNull(setup);
+		Objects.requireNonNull(mrX);
+		Objects.requireNonNull(detectives);
+		return new MyGameState(setup, ImmutableSet.of(Piece.MrX.MRX), ImmutableList.of(), mrX, detectives);
 
 	}
 
