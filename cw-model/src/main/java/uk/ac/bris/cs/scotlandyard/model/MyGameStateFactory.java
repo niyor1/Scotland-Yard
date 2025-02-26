@@ -38,6 +38,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.log = log;
 			this.mrX = mrX;
 			this.detectives = detectives;
+			this.winner = ImmutableSet.of();
 
 		}
 		@Nonnull
@@ -66,7 +67,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public ImmutableSet<Piece> getPlayers() {
-			return remaining;
+			Set<Piece> AllPiecesSet = new HashSet<Piece>();
+			for (Player player : detectives) {
+				AllPiecesSet.add(player.piece());
+			}
+			AllPiecesSet.add(mrX.piece());
+			return ImmutableSet.copyOf(AllPiecesSet);
 		}
 
 		@Nonnull
@@ -125,6 +131,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		if(detectives.isEmpty()) {
 			throw new NullPointerException();
 		}
+
+
 
 		Set<Piece> duplicateDetective = new HashSet<>();
 		Set<Integer> location = new HashSet<>();
