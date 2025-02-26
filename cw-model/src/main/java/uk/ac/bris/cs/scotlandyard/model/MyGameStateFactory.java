@@ -9,10 +9,7 @@ import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
 
-import java.util.List; //imported list
-import java.util.Optional;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.*;
 
 /**
  * cw-model
@@ -75,19 +72,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
-            /*for (Player player : detectives) {
-                if (detective.equals(player)) {
+            for (Player player : detectives) {
+                if (detective.equals(player.piece())) {
                     return Optional.of(player.location());
                 }
-            } */
+            }
 			return Optional.empty();
 		}
 
 		@Nonnull
 		@Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
-
-			//need to implement
 			return Optional.empty();
 		}
 
@@ -118,6 +113,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		if(setup == null){
 			throw new NullPointerException();
 		}
+		if(setup.moves.isEmpty()) {
+			throw new IllegalArgumentException("Moves is empty!");
+		}
+		if(setup.graph.nodes().isEmpty()){
+			throw new IllegalArgumentException();
+		}
 		if(mrX == null ){
 			throw new NullPointerException();
 		}
@@ -126,18 +127,22 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 
 		Set<Piece> duplicateDetective = new HashSet<>();
-
+		Set<Integer> location = new HashSet<>();
 		int mrXCount = 0;
+
 		for(Player player : detectives) {
 			if(player.isDetective()){
 				if(!duplicateDetective.add(player.piece())){
 					throw new IllegalArgumentException();
 				}
+				if(!location.add(player.location())){
+					throw new IllegalArgumentException();
+				}
+				if(player.has(ScotlandYard.Ticket.SECRET) || player.has(ScotlandYard.Ticket.DOUBLE)){
+					throw new IllegalArgumentException();
+				}
 			}
 			if(player.isMrX()){mrXCount +=1;}
-			if(player.isDetective() && player.has(ScotlandYard.Ticket.SECRET)){
-				throw new IllegalArgumentException();
-			}
 		}
 		if(!(mrXCount == 0)){
 			throw new IllegalArgumentException();
