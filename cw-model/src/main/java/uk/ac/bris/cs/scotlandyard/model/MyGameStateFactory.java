@@ -8,9 +8,11 @@ import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
+
 import java.util.List; //imported list
-import java.util.Objects; //imported Objects
 import java.util.Optional;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
  * cw-model
@@ -113,9 +115,34 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Player mrX,
 			ImmutableList<Player> detectives) {
 		// TODO
-		Objects.requireNonNull(setup);
-		Objects.requireNonNull(mrX);
-		Objects.requireNonNull(detectives);
+		if(setup == null){
+			throw new NullPointerException();
+		}
+		if(mrX == null ){
+			throw new NullPointerException();
+		}
+		if(detectives.isEmpty()) {
+			throw new NullPointerException();
+		}
+
+		Set<Piece> duplicateDetective = new HashSet<>();
+
+		int mrXCount = 0;
+		for(Player player : detectives) {
+			if(player.isDetective()){
+				if(!duplicateDetective.add(player.piece())){
+					throw new IllegalArgumentException();
+				}
+			}
+			if(player.isMrX()){mrXCount +=1;}
+			if(player.isDetective() && player.has(ScotlandYard.Ticket.SECRET)){
+				throw new IllegalArgumentException();
+			}
+		}
+		if(!(mrXCount == 0)){
+			throw new IllegalArgumentException();
+		}
+
 		return new MyGameState(setup, ImmutableSet.of(Piece.MrX.MRX), ImmutableList.of(), mrX, detectives);
 
 	}
