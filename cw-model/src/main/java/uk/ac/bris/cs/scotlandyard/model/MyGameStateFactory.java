@@ -89,6 +89,14 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+			if(piece.equals(mrX.piece())){
+				return mrX.tickets());
+			};
+			for (Player player : detectives) {
+				if (piece.equals(player.piece())) {
+					return player.tickets();
+				}
+			}
 			return Optional.empty();
 		}
 
