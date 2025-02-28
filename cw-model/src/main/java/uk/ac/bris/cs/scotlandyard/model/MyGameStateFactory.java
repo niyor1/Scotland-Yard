@@ -3,6 +3,7 @@ package uk.ac.bris.cs.scotlandyard.model;
 import com.google.common.collect.ImmutableList;
 
 import javax.annotation.Nonnull;
+import javax.swing.text.html.Option;
 
 import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
@@ -89,13 +90,27 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
-			if(piece.equals(mrX.piece())){
-				return mrX.tickets());
+			TicketBoard playerTicks = new TicketBoard() {
+				@Override
+				public int getCount(@Nonnull ScotlandYard.Ticket ticket) {
+					for (Player player : detectives) {
+						if (piece.equals(player.piece())) {
+							return player.tickets().get(ticket);
+						}
+					}
+					if (piece.equals(mrX.piece())) {
+						return mrX.tickets().get(ticket);
+					}
+					return 0;
+				}
 			};
 			for (Player player : detectives) {
 				if (piece.equals(player.piece())) {
-					return player.tickets();
+					return Optional.of(playerTicks);
 				}
+			}
+			if (piece.equals(mrX.piece())) {
+				return Optional.of(playerTicks);
 			}
 			return Optional.empty();
 		}
