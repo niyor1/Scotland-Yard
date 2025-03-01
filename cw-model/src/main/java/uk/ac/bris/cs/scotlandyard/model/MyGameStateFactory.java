@@ -45,6 +45,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public GameState advance(Move move) {
+			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
 			// moves will be either single or double move depending on that the travel log has to be updated
 			return move.accept(new Move.Visitor<GameState>() {
 				@Override
@@ -127,6 +128,26 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			return winner;
 		}
 
+
+		private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
+
+			// TODO create an empty collection of some sort, say, HashSet, to store all the SingleMove we generate
+
+			for(int destination : setup.graph.adjacentNodes(source)) {
+				// TODO find out if destination is occupied by a detective
+				//  if the location is occupied, don't add to the collection of moves to return
+
+				for(ScotlandYard.Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()) ) {
+					// TODO find out if the player has the required tickets
+					//  if it does, construct a SingleMove and add it the collection of moves to return
+				}
+
+				// TODO consider the rules of secret moves here
+				//  add moves to the destination via a secret ticket if there are any left with the player
+			}
+
+			return null;
+		}
 		@Nonnull
 		@Override
 		public ImmutableSet<Move> getAvailableMoves() {
@@ -143,7 +164,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			throw new NullPointerException();
 		}
 		if(setup.moves.isEmpty()) {
-			throw new IllegalArgumentException("Moves is empty!");
+			throw new IllegalArgumentException();
 		}
 		if(setup.graph.nodes().isEmpty()){
 			throw new IllegalArgumentException();
