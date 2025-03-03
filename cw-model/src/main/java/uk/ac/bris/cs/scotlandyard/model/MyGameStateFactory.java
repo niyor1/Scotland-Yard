@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 import javax.swing.text.html.Option;
 
 import com.google.common.collect.ImmutableSet;
+import org.checkerframework.checker.units.qual.N;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
@@ -40,6 +41,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.mrX = mrX;
 			this.detectives = detectives;
 			this.winner = ImmutableSet.of();
+			this.moves = ImmutableSet.of();
 
 		}
 		@Nonnull
@@ -74,7 +76,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				AllPiecesSet.add(player.piece());
 			}
 			AllPiecesSet.add(mrX.piece());
-			return ImmutableSet.copyOf(AllPiecesSet);
+			this.remaining = ImmutableSet.copyOf(AllPiecesSet);
+			return this.remaining;
 		}
 
 		@Nonnull
@@ -130,20 +133,32 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 
 		private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
-
-			// TODO create an empty collection of some sort, say, HashSet, to store all the SingleMove we generate
+			Set<Move.SingleMove> AvailableMoves = new HashSet<>();
 
 			for(int destination : setup.graph.adjacentNodes(source)) {
-				// TODO find out if destination is occupied by a detective
-				//  if the location is occupied, don't add to the collection of moves to return
-
+				int Ncounter = 0;
+				for (Player CurrentPlayer : detectives){
+					if (CurrentPlayer.location() != destination){
+						Ncounter += 1;
+					}
+				}
 				for(ScotlandYard.Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()) ) {
 					// TODO find out if the player has the required tickets
 					//  if it does, construct a SingleMove and add it the collection of moves to return
+					if (player.tickets().get(t.requiredTicket()) == 0){
+						Ncounter += 1;
+					}
+					else{
+						if  (Ncounter != 0){
+							AvailableMoves.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
+						}
+
+					}
 				}
 
 				// TODO consider the rules of secret moves here
 				//  add moves to the destination via a secret ticket if there are any left with the player
+
 			}
 
 			return null;
@@ -151,7 +166,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public ImmutableSet<Move> getAvailableMoves() {
-			return moves;
+			Set<Move> AllMoves = new HashSet<>();
+			for (Player player : detectives) {
+				AllMoves.addAll(Objects.requireNonNull(makeSingleMoves(this.setup, this.detectives, player, player.location())));
+			}
+			this.moves = ImmutableSet.copyOf(AllMoves);
+			return this.moves;
 		}
 	}
 
