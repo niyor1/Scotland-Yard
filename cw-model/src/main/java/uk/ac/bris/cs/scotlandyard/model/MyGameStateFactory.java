@@ -66,46 +66,61 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public GameSetup getSetup() {
+			//returns the setup
 			return setup;
 		}
 
 		@Nonnull
 		@Override
 		public ImmutableSet<Piece> getPlayers() {
+			//creates a new hashset that will contain all the pieces
 			Set<Piece> AllPiecesSet = new HashSet<Piece>();
+			//for each player in detective, add their piece to the hash set
 			for (Player player : detectives) {
 				AllPiecesSet.add(player.piece());
 			}
+			//add mrX's piece to the hashset
 			AllPiecesSet.add(mrX.piece());
+			//make remaining equal amn immutable set of all pieces
 			this.remaining = ImmutableSet.copyOf(AllPiecesSet);
+			//return the altered remaining
 			return this.remaining;
 		}
 
 		@Nonnull
 		@Override
 		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
+			//go through the list of detectives
+			//if the piece matches one in detective
             for (Player player : detectives) {
                 if (detective.equals(player.piece())) {
+					//returns location if there is one
                     return Optional.of(player.location());
                 }
             }
+			//returns empty otherwise
 			return Optional.empty();
 		}
 
 		@Nonnull
 		@Override
 		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+			//creates a new ticketboard
 			TicketBoard playerTicks = new TicketBoard() {
 				@Override
+				//implements the getCount method
 				public int getCount(@Nonnull ScotlandYard.Ticket ticket) {
+					//if its one of the detectives then we return their tickets
 					for (Player player : detectives) {
 						if (piece.equals(player.piece())) {
 							return player.tickets().get(ticket);
 						}
 					}
+					//if its mrX, then we return his tickets
 					if (piece.equals(mrX.piece())) {
 						return mrX.tickets().get(ticket);
 					}
+					//if they dont exist we return 0
 					return 0;
 				}
 			};
