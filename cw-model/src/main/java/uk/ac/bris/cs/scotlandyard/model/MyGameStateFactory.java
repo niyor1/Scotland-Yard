@@ -6,6 +6,7 @@ import javax.annotation.Nonnull;
 import javax.swing.text.html.Option;
 
 import com.google.common.collect.ImmutableSet;
+import org.checkerframework.checker.units.qual.A;
 import org.checkerframework.checker.units.qual.N;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
@@ -132,45 +133,74 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 
 
-		private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source){
-			Set<Move.SingleMove> AvailableMoves = new HashSet<>();
-
+		private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
+			Set<Move.SingleMove> availableMoves = new HashSet<>();
+			
 			for(int destination : setup.graph.adjacentNodes(source)) {
-				int Ncounter = 0;
-				for (Player CurrentPlayer : detectives){
-					if (CurrentPlayer.location() != destination){
-						Ncounter += 1;
-					}
+				boolean isOccupied = false;
+				for (Player detective : detectives){
+                    if (detective.location() == destination) {
+                        isOccupied = true;
+                        break;
+                    }
 				}
-				for(ScotlandYard.Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()) ) {
-					// TODO find out if the player has the required tickets
-					//  if it does, construct a SingleMove and add it the collection of moves to return
-					if (player.tickets().get(t.requiredTicket()) == 0){
-						Ncounter += 1;
-					}
-					else{
-						if  (Ncounter != 0){
-							AvailableMoves.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
-						}
+				
+				if (isOccupied) continue;
 
+				for(ScotlandYard.Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
+					if (player.has(t.requiredTicket())) {
+						availableMoves.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
 					}
 				}
 
-				// TODO consider the rules of secret moves here
-				//  add moves to the destination via a secret ticket if there are any left with the player
-
+				if (player.isMrX() && player.has(ScotlandYard.Ticket.SECRET)) {
+					availableMoves.add(new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination));
+				}
 			}
 
-			return null;
+			return availableMoves;
 		}
+
+		private static Set<Move.DoubleMove> makeDoubleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
+			Set<Move.DoubleMove> availableMoves = new HashSet<>();
+			if (setup.moves.size() < 2){
+				return availableMoves;
+			}
+
+			if (!player.isMrX() || !player.has(ScotlandYard.Ticket.DOUBLE)) return availableMoves;
+
+			Set<Move.SingleMove> firstMoves = makeSingleMoves(setup, detectives, player, source);
+			
+			for (Move.SingleMove firstMove : firstMoves) {
+				Player playerAfterFirstMove = player.use(firstMove.ticket);
+				Set<Move.SingleMove> secondMoves = makeSingleMoves(setup, detectives, playerAfterFirstMove, firstMove.destination);
+				
+				for (Move.SingleMove secondMove : secondMoves) {
+					availableMoves.add(new Move.DoubleMove(player.piece(), source, firstMove.ticket, firstMove.destination, secondMove.ticket, secondMove.destination));
+				}
+			}
+
+			return availableMoves;
+		}
+
 		@Nonnull
 		@Override
 		public ImmutableSet<Move> getAvailableMoves() {
-			Set<Move> AllMoves = new HashSet<>();
-			for (Player player : detectives) {
-				AllMoves.addAll(Objects.requireNonNull(makeSingleMoves(this.setup, this.detectives, player, player.location())));
+			Set<Move> allMoves = new HashSet<>();
+
+			if (remaining.contains(Piece.MrX.MRX)) {
+				allMoves.addAll(makeSingleMoves(setup, detectives, mrX, mrX.location()));
+				allMoves.addAll(makeDoubleMoves(setup, detectives, mrX, mrX.location()));
 			}
-			this.moves = ImmutableSet.copyOf(AllMoves);
+			else {
+				for (Player detective : detectives) {
+					if (remaining.contains(detective.piece())) {
+						allMoves.addAll(makeSingleMoves(setup, detectives, detective, detective.location()));
+					}
+				}
+			}
+
+			this.moves = ImmutableSet.copyOf(allMoves);
 			return this.moves;
 		}
 	}
