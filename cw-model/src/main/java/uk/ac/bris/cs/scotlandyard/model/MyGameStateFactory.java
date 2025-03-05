@@ -138,41 +138,49 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public ImmutableList<LogEntry> getMrXTravelLog() {
+			//returns the log of mrX
 			return log;
 		}
 
 		@Nonnull
 		@Override
 		public ImmutableSet<Piece> getWinner() {
+			//returns the winner
 			return winner;
 		}
 
 
 		private static Set<Move.SingleMove> makeSingleMoves(GameSetup setup, List<Player> detectives, Player player, int source) {
+			//makes a new hash list to store all available moves
 			Set<Move.SingleMove> availableMoves = new HashSet<>();
-			
+			//loop through each adjacent node
 			for(int destination : setup.graph.adjacentNodes(source)) {
-				boolean isOccupied = false;
+				//set a boolean that is false if not occcupied by a detective
+				boolean Occupied = false;
+				//loop through each detective
 				for (Player detective : detectives){
+					//if there is a detective then set boolean to true then break
                     if (detective.location() == destination) {
-                        isOccupied = true;
+                        Occupied = true;
                         break;
                     }
 				}
-				
-				if (isOccupied) continue;
-
-				for(ScotlandYard.Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
-					if (player.has(t.requiredTicket())) {
-						availableMoves.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
+				//if its not occupied then we can procees
+				if (!Occupied) {
+					//loop through each transport type from source node to destination node
+					for (ScotlandYard.Transport t : setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of())) {
+						//if the player has the required ticket then we add it to the hashset
+						if (player.has(t.requiredTicket())) {
+							availableMoves.add(new Move.SingleMove(player.piece(), source, t.requiredTicket(), destination));
+						}
+					}
+					//if the player is mr x and has a secret ticket then we can add their move regardless
+					if (player.isMrX() && player.has(ScotlandYard.Ticket.SECRET)) {
+						availableMoves.add(new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination));
 					}
 				}
-
-				if (player.isMrX() && player.has(ScotlandYard.Ticket.SECRET)) {
-					availableMoves.add(new Move.SingleMove(player.piece(), source, ScotlandYard.Ticket.SECRET, destination));
-				}
 			}
-
+			//return the hashset at the end
 			return availableMoves;
 		}
 
