@@ -24,10 +24,7 @@ public final class MyModelFactory implements Factory<Model> {
 
 
 		public MyModel(GameSetup setup, Player mrX, ImmutableList<Player> detectives) {
-			//validate parameters
-			Objects.requireNonNull(setup);
-			Objects.requireNonNull(mrX);
-			Objects.requireNonNull(detectives);
+
 			this.gameState = new MyGameStateFactory().build(setup, mrX, detectives);
 			this.observers = new HashSet<>();
 			this.gameOver = !gameState.getWinner().isEmpty();
@@ -41,8 +38,10 @@ public final class MyModelFactory implements Factory<Model> {
 		}
 
 		@Override
-		public void registerObserver(@Nonnull Observer observer) {
-			Objects.requireNonNull(observer);
+		public void registerObserver(Observer observer) {
+			if(observer == null ){
+				throw new NullPointerException();
+			}
 			if (observers.contains(observer)) {
 				throw new IllegalArgumentException("Observer already registered");
 			}
@@ -51,8 +50,10 @@ public final class MyModelFactory implements Factory<Model> {
 		}
 
 		@Override
-		public void unregisterObserver(@Nonnull Observer observer) {
-			Objects.requireNonNull(observer);
+		public void unregisterObserver(Observer observer) {
+			if(observer == null ){
+				throw new NullPointerException();
+			}
 			if (!observers.contains(observer)) {
 				throw new IllegalArgumentException("Observer not registered");
 			}
