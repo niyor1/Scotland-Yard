@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 /**
