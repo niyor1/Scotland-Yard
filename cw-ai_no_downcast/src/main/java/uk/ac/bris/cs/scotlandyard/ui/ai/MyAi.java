@@ -9,6 +9,8 @@ import com.google.common.graph.ValueGraph;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
 
+import static java.lang.Math.sqrt;
+
 
 public class MyAi implements Ai {
 
@@ -19,14 +21,30 @@ public class MyAi implements Ai {
 			Pair<Long, TimeUnit> timeoutPair) {
 
 		Move bestMove = null;
+
+
 		Double highScore = 0.0d;
+
+
 		for (Move move : board.getAvailableMoves()){
+
+			Integer mrxLocation = getMoveSource(move);
+			Integer mrxMoveLocation = getMoveDestination(move);
+
 			Double moveScore = score(move, board);
+
+			if (mrxLocation == mrxMoveLocation){
+				moveScore = 0.0d;
+			}
+
+			System.out.println(moveScore);
 			if (highScore < moveScore){
 				highScore = moveScore;
 				bestMove = move;
+
 			}
 		}
+
 		return bestMove;
 	}
 
@@ -51,7 +69,84 @@ public class MyAi implements Ai {
 
 	private Double score(Move move, Board board) {
 
-		final int mrxMoveLocation = move.accept(new Move.Visitor<Integer>() {
+		Integer mrxMoveLocation = getMoveDestination(move);
+
+		List<Integer> detectiveLocations = getDetectiveLocations(board);
+		List<Integer> distanceToMrX = new ArrayList<>();
+
+		for (Integer location : detectiveLocations) {
+			distanceToMrX.add(findDistance(mrxMoveLocation, location, board));
+		}
+
+		double score = 0;
+		for (Integer i : distanceToMrX) {
+			score += sqrt(i);
+		}
+
+		score = score + (freedomAfterMove(mrxMoveLocation, board, detectiveLocations) / 15);
+		return score;
+
+	}
+
+	private Integer findDistance(int mrxMoveLocation, Integer location, Board board) {
+		ValueGraph<Integer, ImmutableSet<ScotlandYard.Transport>> newGraph = board.getSetup().graph;
+		Map<Integer, Integer> distances = new HashMap<>();
+		Queue<Integer> queue = new LinkedList<>();
+		Set<Integer> visited = new HashSet<>();
+
+		distances.put(location,0);
+		queue.add(location);
+		while(!queue.isEmpty()){
+
+			int currentNode = queue.poll();
+
+			if(currentNode == mrxMoveLocation){
+				return distances.get(currentNode);
+			}
+
+			for(Integer neigbour : newGraph.adjacentNodes(currentNode)){
+				if (!visited.contains(neigbour)) {
+					visited.add(neigbour);
+					distances.put(neigbour, distances.get(currentNode)+1);
+					queue.add(neigbour);
+				}
+			}
+		}
+
+
+
+		return 0;
+	}
+
+	private Integer freedomAfterMove(int mrxMoveLocation, Board board, List<Integer> detectiveLocations){
+		Integer moves = 0;
+		for (Integer neighbour : board.getSetup().graph.adjacentNodes(mrxMoveLocation)){
+			for (Integer detLocation : detectiveLocations){
+				if (!(neighbour == detLocation)){
+					moves =+ 1;
+				}
+			}
+		}
+
+		return moves;
+	}
+
+	private Integer getMoveSource(Move move){
+		return move.accept(new Move.Visitor<Integer>() {
+			@Override
+			public Integer visit(Move.SingleMove move) {
+				return move.source();
+			}
+
+			@Override
+			public Integer visit(Move.DoubleMove move) {
+				return move.source();
+			}
+		});
+	}
+
+	private Integer getMoveDestination(Move move){
+		return move.accept(new Move.Visitor<Integer>() {
 			@Override
 			public Integer visit(Move.SingleMove move) {
 				return move.destination;
@@ -62,21 +157,6 @@ public class MyAi implements Ai {
 				return move.destination2;
 			}
 		});
-
-		List<Integer> detectiveLocations = getDetectiveLocations(board);
-		List<Integer> distanceToMrX = new ArrayList<>();
-		for (Integer location : detectiveLocations) {
-			distanceToMrX.add(findDistance(mrxMoveLocation, location, board));
-		}
-
-		return 0.0d;
-
-	}
-
-	private Integer findDistance(int mrxMoveLocation, Integer location, Board board) {
-		ValueGraph<Integer, ImmutableSet<ScotlandYard.Transport>> newGraph = board.getSetup().graph;
-
-		return 0;
 	}
 
 }
