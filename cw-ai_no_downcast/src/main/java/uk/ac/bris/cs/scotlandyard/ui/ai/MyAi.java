@@ -3,6 +3,7 @@ package uk.ac.bris.cs.scotlandyard.ui.ai;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.swing.*;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ValueGraph;
@@ -30,6 +31,7 @@ public class MyAi implements Ai {
 
 			Integer mrxLocation = getMoveSource(move);
 			Integer mrxMoveLocation = getMoveDestination(move);
+			System.out.println(mrxLocation+"  "+mrxMoveLocation);
 
 			Double moveScore = score(move, board);
 
@@ -37,7 +39,6 @@ public class MyAi implements Ai {
 				moveScore = 0.0d;
 			}
 
-			System.out.println(moveScore);
 			if (highScore < moveScore){
 				highScore = moveScore;
 				bestMove = move;
@@ -83,7 +84,15 @@ public class MyAi implements Ai {
 			score += sqrt(i);
 		}
 
-		score = score + (freedomAfterMove(mrxMoveLocation, board, detectiveLocations) / 15);
+		if (freedomAfterMove(mrxMoveLocation, board, detectiveLocations) != board.getSetup().graph.adjacentNodes(mrxMoveLocation).size()){
+			score = Double.MIN_VALUE;
+		}
+		else{
+			score = score + (freedomAfterMove(mrxMoveLocation, board, detectiveLocations) / 15);
+		}
+		System.out.println(board.getSetup().graph.adjacentNodes(mrxMoveLocation).size());
+		System.out.println(freedomAfterMove(mrxMoveLocation, board, detectiveLocations));
+		System.out.println();
 		return score;
 
 	}
@@ -120,11 +129,16 @@ public class MyAi implements Ai {
 
 	private Integer freedomAfterMove(int mrxMoveLocation, Board board, List<Integer> detectiveLocations){
 		Integer moves = 0;
+		Boolean Free = true;
 		for (Integer neighbour : board.getSetup().graph.adjacentNodes(mrxMoveLocation)){
+			Free = true;
 			for (Integer detLocation : detectiveLocations){
-				if (!(neighbour == detLocation)){
-					moves =+ 1;
+				if (neighbour == detLocation){
+					Free = false;
 				}
+			}
+			if(Free){
+				moves+=1;
 			}
 		}
 
