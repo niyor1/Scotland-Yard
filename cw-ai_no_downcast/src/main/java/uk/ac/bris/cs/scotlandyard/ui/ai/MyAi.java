@@ -29,11 +29,12 @@ public class MyAi implements Ai {
 
 		for (Move move : board.getAvailableMoves()){
 
+
+
 			Integer mrxLocation = getMoveSource(move);
 			Integer mrxMoveLocation = getMoveDestination(move);
-			System.out.println(mrxLocation+"  "+mrxMoveLocation);
 
-			Double moveScore = score(move, board);
+			Double moveScore = score(mrxMoveLocation, board);
 
 			if (mrxLocation == mrxMoveLocation){
 				moveScore = 0.0d;
@@ -45,6 +46,7 @@ public class MyAi implements Ai {
 
 			}
 		}
+
 
 		return bestMove;
 	}
@@ -68,9 +70,7 @@ public class MyAi implements Ai {
 		return detectiveLocations;
 	}
 
-	private Double score(Move move, Board board) {
-
-		Integer mrxMoveLocation = getMoveDestination(move);
+	private Double score(Integer mrxMoveLocation, Board board) {
 
 		List<Integer> detectiveLocations = getDetectiveLocations(board);
 		List<Integer> distanceToMrX = new ArrayList<>();
@@ -90,9 +90,6 @@ public class MyAi implements Ai {
 		else{
 			score = score + (freedomAfterMove(mrxMoveLocation, board, detectiveLocations) / 15);
 		}
-		System.out.println(board.getSetup().graph.adjacentNodes(mrxMoveLocation).size());
-		System.out.println(freedomAfterMove(mrxMoveLocation, board, detectiveLocations));
-		System.out.println();
 		return score;
 
 	}
