@@ -46,72 +46,91 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull
 		@Override
 		public GameState advance(Move move) {
-
+			//if the log size is bigger than the number of moves then the game is over and you return nothing
 			if (log.size() >= setup.moves.size()) {
 				return this;
 			}
+			//if moves doesnt contain the move chosen then it will throw an error
 			if (!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+
 
 			return move.accept(new Move.Visitor<GameState>() {
 				@Override
 				public GameState visit(Move.SingleMove move) {
-
+					//Copy set of the remaining players to move
                     Set<Piece> remainingTemp = new HashSet<>(Set.copyOf(remaining));
-
+					//if the move has been made by Mr X
                     if (move.commencedBy().equals(mrX.piece())) {
+						//Copy of the log entries
                         List<LogEntry> mrXlog = new ArrayList<>(List.copyOf(getMrXTravelLog()));
+						//integer variable to know what round it is
 						int round = mrXlog.size() + 1;
+						//we complete the move and move mrX location and use the ticket
 						mrX = mrX.at(move.destination).use(move.ticket);
+						//if it is a reveal round then you add a reveal log entry with both destination and ticket
 						if (setup.moves.get(round - 1)) {
 							mrXlog.add(LogEntry.reveal(move.ticket, move.destination));
-						} else {
+						}
+						//otherwise its a hide round and you only show the ticket
+						else {
 							mrXlog.add(LogEntry.hidden(move.ticket));
 						}
+						//now update the log of the class
 						log = ImmutableList.copyOf(mrXlog);
+						//remove mrx from remaining as he has completed his move now
 						remainingTemp.remove(mrX.piece());
+						//for each detective if the moves for each detective isnt empty then you add that detective to remaining
 						for (Player player : detectives) {
 							if (!makeSingleMoves(setup, detectives, player, player.location()).isEmpty()) {
 								remainingTemp.add(player.piece());
 							}
 						}
+						//updates the remaining of the class
 						remaining = ImmutableSet.copyOf(remainingTemp);
 
 
-					} else {
+					}
+					//otherwise its a move made by a detective
+					else {
+						//make a temp of all the detectives Set
                         Set<Player> detectivesTemp = new HashSet<>(Set.copyOf(detectives));
 
+						//for each player in detective
 						for (Player player : detectives) {
+							//if the detective is the one who made the move
 							if (move.commencedBy().equals(player.piece())) {
+								//make a copy player for the player after the move
 								Player playerAfterMove = player.at(move.destination).use(move.ticket);
+								//remove the original player from detectives and add the new one
 								detectivesTemp.remove(player);
 								detectivesTemp.add(playerAfterMove);
+								//change the detectives of the class
 								detectives = ImmutableList.copyOf(detectivesTemp);
 
-
+								//give mrX the ticket that we jsut used
 								mrX = mrX.give(move.ticket);
 
+								//remove the player from temp
 								remainingTemp.remove(player.piece());
+								//if temp is empty then add mrX
 								if (remainingTemp.isEmpty()) {
 									remainingTemp.add(mrX.piece());
 								}
 
 							}
 						}
+						//change the remaining of the class
 						remaining = ImmutableSet.copyOf(remainingTemp);
-						if (remainingTemp.isEmpty()) {
-							remaining = ImmutableSet.of(mrX.piece());
-						}
-
 					}
 
 
-
+					//now return the new game state
                     return new MyGameState(setup, remaining, log, mrX, detectives);
                 }
 
 				@Override
 				public GameState visit(Move.DoubleMove move) {
-
+					//if its a double move
 					Set<Piece> remainingTemp = new HashSet<>(Set.copyOf(remaining));
 					remainingTemp.remove(mrX.piece());
 					List<LogEntry> mrX2log = new ArrayList<>(List.copyOf(getMrXTravelLog()));
