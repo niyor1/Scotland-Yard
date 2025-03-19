@@ -3,11 +3,11 @@ import java.util.*;
 
 //tree node
 class Node {
-    int value;
+    Double value;
     List<Node> children;
     boolean findMax;
 
-    public Node(int x, boolean findMax)
+    public Node(double x, boolean findMax)
     {
         this.value = x;
         this.children = new ArrayList<Node>();
@@ -27,20 +27,21 @@ public class MinMaxTree {
         this.root = root;
     }
 
-    public int computeMinMax(Node node) {
+    public double computeMinMax(Node node) {
         if (node.children.isEmpty()) {
             return node.value;
         }
 
-        int bestValue = 0;
+        double bestValue;
+
         if (node.findMax) {
-            bestValue = Integer.MIN_VALUE;
+            bestValue = Double.MIN_VALUE;
         }
         else{
-            bestValue = Integer.MAX_VALUE;
+            bestValue = Double.MAX_VALUE;
         }
         for (Node child : node.children) {
-            int childValue = computeMinMax(child);
+            double childValue = computeMinMax(child);
             if (node.findMax) {
                 bestValue = Math.max(bestValue, childValue);
             } else {
