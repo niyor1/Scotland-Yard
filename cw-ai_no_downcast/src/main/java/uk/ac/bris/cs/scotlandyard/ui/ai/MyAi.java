@@ -3,7 +3,6 @@ package uk.ac.bris.cs.scotlandyard.ui.ai;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import javax.swing.*;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ValueGraph;
@@ -25,15 +24,17 @@ public class MyAi implements Ai {
 		Move bestMove = null;
 		double highScore = Double.MIN_VALUE;
 		List<Integer> detectiveLocations = getDetectiveLocations(board);
-
+		List<ScotlandYard.Ticket> ticketsUsed = new ArrayList<>();
 		for (Move move : board.getAvailableMoves()){
 
 			Integer mrxLocation = getMoveSource(move);
 			Integer mrxMoveLocation = getMoveDestination(move);
+			ticketsUsed.addAll(getMoveTicket(move));
+
 
 			if (!mrxLocation.equals(mrxMoveLocation)){
 				Node moveNode = new Node(0, true);
-				populateTree(moveNode, board, mrxMoveLocation, detectiveLocations,2);
+				populateTree(moveNode, board, mrxMoveLocation, detectiveLocations,2, ticketsUsed);
 
 				MinMaxTree tree = new MinMaxTree(moveNode);
 				double moveScore = tree.computeMinMax(moveNode);
@@ -52,9 +53,9 @@ public class MyAi implements Ai {
 		return bestMove;
 	}
 
-	private void populateTree(Node node, Board board, Integer mrxLocation, List<Integer> detectiveLocations, int depth){
+	private void populateTree(Node node, Board board, Integer mrxLocation, List<Integer> detectiveLocations, int depth,List<ScotlandYard.Ticket> ticketsUsed){
 		if (depth == 0){
-			node.value = score(mrxLocation, board, detectiveLocations);
+			node.value = score(mrxLocation, board, detectiveLocations,ticketsUsed);
 			return;
 		}
 
@@ -67,14 +68,14 @@ public class MyAi implements Ai {
 						if (!detectiveLocations.contains(neighbour) && !detectiveLocations.contains(neighbour2)){
 							Node child = new Node(0, false);
 							node.addNode(child);
-							populateTree(child, board, neighbour2, detectiveLocations,depth-1);
+							populateTree(child, board, neighbour2, detectiveLocations,depth-1,ticketsUsed);
 						}
 					}
 				}
 				if (!detectiveLocations.contains(neighbour)){
 					Node child = new Node(0, false);
 					node.addNode(child);
-					populateTree(child, board, neighbour, detectiveLocations,depth-1);
+					populateTree(child, board, neighbour, detectiveLocations,depth-1,ticketsUsed);
 				}
 			}
 		}
@@ -88,7 +89,7 @@ public class MyAi implements Ai {
 						for (List<Integer> combination : detectiveMoveCombinations){
 							Node child = new Node(0, true);
 							node.addNode(child);
-							populateTree(child, board, mrxLocation, combination,depth-1);
+							populateTree(child, board, mrxLocation, combination,depth-1,ticketsUsed);
 						}
 
 					}
@@ -151,8 +152,9 @@ public class MyAi implements Ai {
 		return detectiveLocations;
 	}
 
-	private Double score(Integer mrxMoveLocation, Board board, List<Integer>  detectiveLocations) {
+	private Double score(Integer mrxMoveLocation, Board board, List<Integer>  detectiveLocations, List<ScotlandYard.Ticket> ticketsUsed) {
 
+		Board.TicketBoard mrXtickets = board.getPlayerTickets(Piece.MrX.MRX).get();
 		List<Integer> distanceToMrX = new ArrayList<>();
 
 		for (Integer location : detectiveLocations) {
@@ -163,13 +165,22 @@ public class MyAi implements Ai {
 		for (Integer i : distanceToMrX) {
 			score += sqrt(i);
 		}
-		int freedom = freedomAfterMove(mrxMoveLocation, board, detectiveLocations);
-
-		if (freedom != board.getSetup().graph.adjacentNodes(mrxMoveLocation).size()){
+		if((ticketsUsed.size() == 2) && (score > sqrt(2))){
 			return Double.MIN_VALUE;
 		}
 
-		return score + (freedom / 15);
+		int freedom = freedomAfterMove(mrxMoveLocation, board, detectiveLocations);
+		if (freedom != board.getSetup().graph.adjacentNodes(mrxMoveLocation).size()){
+			return Double.MIN_VALUE;
+		}
+		else{
+			score += (freedom / 15.0);
+		}
+		if ((mrXtickets.getCount(ticketsUsed.get(0))) < 3){
+			score /= 2;
+		}
+		System.out.println(score);
+		return score;
 
 	}
 
@@ -245,6 +256,24 @@ public class MyAi implements Ai {
 			@Override
 			public Integer visit(Move.DoubleMove move) {
 				return move.destination2;
+			}
+		});
+	}
+	private List<ScotlandYard.Ticket> getMoveTicket(Move move){
+		return move.accept(new Move.Visitor<List<ScotlandYard.Ticket>>() {
+			@Override
+			public List<ScotlandYard.Ticket> visit(Move.SingleMove move) {
+				List<ScotlandYard.Ticket> tickets = new ArrayList<>();
+				tickets.add(move.ticket);
+				return tickets;
+			}
+
+			@Override
+			public List<ScotlandYard.Ticket> visit(Move.DoubleMove move) {
+				List<ScotlandYard.Ticket> tickets = new ArrayList<>();
+				tickets.add(move.ticket1);
+				tickets.add(move.ticket2);
+				return tickets;
 			}
 		});
 	}
