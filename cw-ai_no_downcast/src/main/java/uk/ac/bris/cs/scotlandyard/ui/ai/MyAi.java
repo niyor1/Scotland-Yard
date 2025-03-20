@@ -21,39 +21,47 @@ public class MyAi implements Ai {
 			@Nonnull Board board,
 			Pair<Long, TimeUnit> timeoutPair) {
 
-		Move bestMove = null;
+		long timeoutMillis = TimeUnit.MILLISECONDS.convert(timeoutPair.left(), timeoutPair.right());
+		long startTime = System.currentTimeMillis();
+		long timeoutAt = startTime + timeoutMillis - 2000;
+
+		Move bestMove = board.getAvailableMoves().iterator().next();
 		double highScore = Double.MIN_VALUE;
 		List<Integer> detectiveLocations = getDetectiveLocations(board);
 		List<ScotlandYard.Ticket> ticketsUsed = new ArrayList<>();
-		for (Move move : board.getAvailableMoves()){
+
+		for (Move move : board.getAvailableMoves()) {
+			if (System.currentTimeMillis() > timeoutAt) {
+				return bestMove;
+			}
 
 			Integer mrxLocation = getMoveSource(move);
 			Integer mrxMoveLocation = getMoveDestination(move);
 			ticketsUsed.addAll(getMoveTicket(move));
 
-
-			if (!mrxLocation.equals(mrxMoveLocation)){
+			if (!mrxLocation.equals(mrxMoveLocation)) {
 				Node moveNode = new Node(0, true);
-				populateTree(moveNode, board, mrxMoveLocation, detectiveLocations,2, ticketsUsed);
+				populateTree(moveNode, board, mrxMoveLocation, detectiveLocations, 2, ticketsUsed);
 
 				MinMaxTree tree = new MinMaxTree(moveNode);
-				double moveScore = tree.computeMinMax(moveNode);
+				double moveScore = tree.computeMinMax(moveNode, Double.MIN_VALUE, Double.MAX_VALUE);
 
-				if (highScore < moveScore){
+				if (highScore < moveScore) {
 					highScore = moveScore;
 					bestMove = move;
-
 				}
 			}
-
-
 		}
-
 
 		return bestMove;
 	}
 
 	private void populateTree(Node node, Board board, Integer mrxLocation, List<Integer> detectiveLocations, int depth,List<ScotlandYard.Ticket> ticketsUsed){
+		if (detectiveLocations.contains(mrxLocation)) {
+			node.value = Double.MIN_VALUE;
+			return;
+		}
+
 		if (depth == 0){
 			node.value = score(mrxLocation, board, detectiveLocations,ticketsUsed);
 			return;
@@ -65,7 +73,7 @@ public class MyAi implements Ai {
 			for (Integer neighbour : board.getSetup().graph.adjacentNodes(mrxLocation)){
 				if (mrxTickets.getCount(ScotlandYard.Ticket.DOUBLE) > 0){
 					for (Integer neighbour2 : board.getSetup().graph.adjacentNodes(neighbour)){
-						if (!detectiveLocations.contains(neighbour) && !detectiveLocations.contains(neighbour2)){
+						if (!detectiveLocations.contains(neighbour) && !detectiveLocations.contains(neighbour2) && (score(neighbour2, board, detectiveLocations, ticketsUsed) < 2)){
 							Node child = new Node(0, false);
 							node.addNode(child);
 							populateTree(child, board, neighbour2, detectiveLocations,depth-1,ticketsUsed);
@@ -156,29 +164,30 @@ public class MyAi implements Ai {
 
 		Board.TicketBoard mrXtickets = board.getPlayerTickets(Piece.MrX.MRX).get();
 		List<Integer> distanceToMrX = new ArrayList<>();
+		double score = 0;
+		double totalDistanceSqrt = 0;
+		int freedom = freedomAfterMove(mrxMoveLocation, board, detectiveLocations);
 
 		for (Integer location : detectiveLocations) {
 			distanceToMrX.add(findDistance(mrxMoveLocation, location, board));
 		}
 
-		double score = 0;
 		for (Integer i : distanceToMrX) {
-			score += sqrt(i);
+			totalDistanceSqrt += sqrt(i);
 		}
-		if((ticketsUsed.size() == 2) && (score > sqrt(2))){
+
+		if (freedom == board.getSetup().graph.adjacentNodes(mrxMoveLocation).size()){
+			score += totalDistanceSqrt + (freedom / 20.0);
+
+		}
+		else{
 			return Double.MIN_VALUE;
 		}
 
-		int freedom = freedomAfterMove(mrxMoveLocation, board, detectiveLocations);
-		if (freedom != board.getSetup().graph.adjacentNodes(mrxMoveLocation).size()){
-			return Double.MIN_VALUE;
-		}
-		else{
-			score += (freedom / 15.0);
-		}
 		if ((mrXtickets.getCount(ticketsUsed.get(0))) < 3){
 			score /= 2;
 		}
+
 		System.out.println(score);
 		return score;
 

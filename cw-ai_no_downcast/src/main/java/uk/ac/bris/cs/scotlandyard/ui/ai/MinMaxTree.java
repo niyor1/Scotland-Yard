@@ -27,30 +27,37 @@ public class MinMaxTree {
         this.root = root;
     }
 
-    public double computeMinMax(Node node) {
+    public double computeMinMax(Node node, double alpha, double beta) {
         if (node.children.isEmpty()) {
             return node.value;
         }
 
-        double bestValue;
-
         if (node.findMax) {
-            bestValue = Double.MIN_VALUE;
+            double bestVal = Double.MIN_VALUE;
+            for (Node child : node.children) {
+                double childValue = computeMinMax(child, alpha, beta);
+                bestVal = Math.max(bestVal, childValue);
+                alpha = Math.max(alpha, bestVal);
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+            return bestVal;
+
         }
         else{
-            bestValue = Double.MAX_VALUE;
-        }
-        for (Node child : node.children) {
-            double childValue = computeMinMax(child);
-            if (node.findMax) {
-                bestValue = Math.max(bestValue, childValue);
-            } else {
-                bestValue = Math.min(bestValue, childValue);
+            double bestVal = Double.MAX_VALUE;
+            for (Node child : node.children) {
+                double childValue = computeMinMax(child, alpha, beta);
+                bestVal = Math.min(bestVal, childValue);
+                beta = Math.min(beta, bestVal);
+                if (beta <= alpha) {
+                    break;
+                }
             }
-        }
+            return bestVal;
 
-        node.value = bestValue;
-        return node.value;
+        }
     }
 
 }
