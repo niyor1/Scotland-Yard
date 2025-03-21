@@ -11,6 +11,7 @@ class Node {
     {
         this.value = x;
         this.children = new ArrayList<Node>();
+        //if the node is in a findmax layer
         this.findMax = findMax;
     }
 
@@ -31,7 +32,7 @@ public class MinMaxTree {
         if (node.children.isEmpty()) {
             return node.value;
         }
-
+         //uses alpha beta pruning
         if (node.findMax) {
             double bestVal = Double.MIN_VALUE;
             for (Node child : node.children) {
