@@ -20,7 +20,7 @@ public class MyAi implements Ai {
 	@Nonnull @Override public Move pickMove(
 			@Nonnull Board board,
 			Pair<Long, TimeUnit> timeoutPair) {
-
+		
 		long timeoutMillis = TimeUnit.MILLISECONDS.convert(timeoutPair.left(), timeoutPair.right());
 		long startTime = System.currentTimeMillis();
 		long timeoutAt = startTime + timeoutMillis - 2000;
@@ -29,6 +29,10 @@ public class MyAi implements Ai {
 		double highScore = Double.MIN_VALUE;
 		List<Integer> detectiveLocations = getDetectiveLocations(board);
 		List<ScotlandYard.Ticket> ticketsUsed = new ArrayList<>();
+		int depth = 2;
+		if (detectiveLocations.size() > 3) {
+			depth = 1;
+		}
 
 		for (Move move : board.getAvailableMoves()) {
 			if (System.currentTimeMillis() > timeoutAt) {
@@ -39,31 +43,47 @@ public class MyAi implements Ai {
 			Integer mrxMoveLocation = getMoveDestination(move);
 			ticketsUsed.addAll(getMoveTicket(move));
 
+			if (score(mrxLocation, board, detectiveLocations) > 2 && getMoveTicket(move).size() == 2){
+				continue;
+			}
+
 			if (!mrxLocation.equals(mrxMoveLocation)) {
 				Node moveNode = new Node(0, true);
-				populateTree(moveNode, board, mrxMoveLocation, detectiveLocations, 2, ticketsUsed);
+				populateTree(moveNode, board, mrxMoveLocation, detectiveLocations, depth);
 
 				MinMaxTree tree = new MinMaxTree(moveNode);
 				double moveScore = tree.computeMinMax(moveNode, Double.MIN_VALUE, Double.MAX_VALUE);
 
-				if (highScore < moveScore) {
+				if (moveScore > highScore) {
 					highScore = moveScore;
 					bestMove = move;
 				}
+				System.out.println("HighScore:" + highScore +" BestMove:" +bestMove +" CurrentMovesScore:" +moveScore);
 			}
 		}
 
 		return bestMove;
 	}
 
-	private void populateTree(Node node, Board board, Integer mrxLocation, List<Integer> detectiveLocations, int depth,List<ScotlandYard.Ticket> ticketsUsed){
+	private boolean isVulnerable(List<Integer> detectiveLocations,Board board, Integer neighbour) {
+		boolean isVulnerable = false;
+		for (Integer detectiveLocation : detectiveLocations) {
+			if (board.getSetup().graph.adjacentNodes(detectiveLocation).contains(neighbour)) {
+				isVulnerable = true;
+				break;
+			}
+		}
+		return isVulnerable;
+	}
+
+	private void populateTree(Node node, Board board, Integer mrxLocation, List<Integer> detectiveLocations, int depth){
 		if (detectiveLocations.contains(mrxLocation)) {
 			node.value = Double.MIN_VALUE;
 			return;
 		}
 
 		if (depth == 0){
-			node.value = score(mrxLocation, board, detectiveLocations,ticketsUsed);
+			node.value = score(mrxLocation, board, detectiveLocations);
 			return;
 		}
 
@@ -73,17 +93,23 @@ public class MyAi implements Ai {
 			for (Integer neighbour : board.getSetup().graph.adjacentNodes(mrxLocation)){
 				if (mrxTickets.getCount(ScotlandYard.Ticket.DOUBLE) > 0){
 					for (Integer neighbour2 : board.getSetup().graph.adjacentNodes(neighbour)){
-						if (!detectiveLocations.contains(neighbour) && !detectiveLocations.contains(neighbour2) && (score(neighbour2, board, detectiveLocations, ticketsUsed) < 2)){
+						if (!detectiveLocations.contains(neighbour) && !detectiveLocations.contains(neighbour2) && (score(neighbour2, board, detectiveLocations) < 2)){
+							if (isVulnerable(detectiveLocations, board, neighbour2)) {
+								continue;
+							}
 							Node child = new Node(0, false);
 							node.addNode(child);
-							populateTree(child, board, neighbour2, detectiveLocations,depth-1,ticketsUsed);
+							populateTree(child, board, neighbour2, detectiveLocations,depth-1);
 						}
 					}
 				}
 				if (!detectiveLocations.contains(neighbour)){
+					if (isVulnerable(detectiveLocations, board, neighbour)) {
+						continue;
+					}
 					Node child = new Node(0, false);
 					node.addNode(child);
-					populateTree(child, board, neighbour, detectiveLocations,depth-1,ticketsUsed);
+					populateTree(child, board, neighbour, detectiveLocations,depth-1);
 				}
 			}
 		}
@@ -92,12 +118,11 @@ public class MyAi implements Ai {
 				for (Integer neighbour : board.getSetup().graph.adjacentNodes(detLocation)){
 					if (!detectiveLocations.contains(neighbour)){
 						List<List<Integer>> detectiveMoveCombinations = new ArrayList<>();
-						createCombinations(allDetectiveMoves(board), 0, new ArrayList<>(), detectiveMoveCombinations);
-						System.out.println(detectiveMoveCombinations);
+						createCombinations(allDetectiveMoves(board, mrxLocation), 0, new ArrayList<>(), detectiveMoveCombinations);
 						for (List<Integer> combination : detectiveMoveCombinations){
 							Node child = new Node(0, true);
 							node.addNode(child);
-							populateTree(child, board, mrxLocation, combination,depth-1,ticketsUsed);
+							populateTree(child, board, mrxLocation, combination,depth-1);
 						}
 
 					}
@@ -108,14 +133,17 @@ public class MyAi implements Ai {
 
 	}
 
-	private List<List<Integer>> allDetectiveMoves(Board board){
+	private List<List<Integer>> allDetectiveMoves(Board board, Integer mrxLocation){
 		List<Integer> detectiveLocations = getDetectiveLocations(board);
 		List<List<Integer>> allDetectiveMoves = new ArrayList<>();
 		for (Integer detectiveLocation : detectiveLocations){
 			List<Integer> detectiveMoves = new ArrayList<>();
 			for (Integer neighbour : board.getSetup().graph.adjacentNodes(detectiveLocation)) {
 				if (!detectiveLocations.contains(neighbour)){
+
 					detectiveMoves.add(neighbour);
+
+
 				}
 			}
 			allDetectiveMoves.add(detectiveMoves);
@@ -160,35 +188,27 @@ public class MyAi implements Ai {
 		return detectiveLocations;
 	}
 
-	private Double score(Integer mrxMoveLocation, Board board, List<Integer>  detectiveLocations, List<ScotlandYard.Ticket> ticketsUsed) {
+	private Double score(Integer mrxMoveLocation, Board board, List<Integer>  detectiveLocations) {
 
-		Board.TicketBoard mrXtickets = board.getPlayerTickets(Piece.MrX.MRX).get();
-		List<Integer> distanceToMrX = new ArrayList<>();
 		double score = 0;
 		double totalDistanceSqrt = 0;
 		int freedom = freedomAfterMove(mrxMoveLocation, board, detectiveLocations);
 
 		for (Integer location : detectiveLocations) {
-			distanceToMrX.add(findDistance(mrxMoveLocation, location, board));
-		}
-
-		for (Integer i : distanceToMrX) {
-			totalDistanceSqrt += sqrt(i);
+			totalDistanceSqrt += sqrt(findDistance(mrxMoveLocation, location, board));
 		}
 
 		if (freedom == board.getSetup().graph.adjacentNodes(mrxMoveLocation).size()){
-			score += totalDistanceSqrt + (freedom / 20.0);
+			score += totalDistanceSqrt + (freedom / 25.0);
 
 		}
 		else{
 			return Double.MIN_VALUE;
 		}
-
-		if ((mrXtickets.getCount(ticketsUsed.get(0))) < 3){
-			score /= 2;
+		if (isVulnerable(detectiveLocations, board, mrxMoveLocation)) {
+			return Double.MIN_VALUE;
 		}
 
-		System.out.println(score);
 		return score;
 
 	}
