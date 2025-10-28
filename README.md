@@ -19,3 +19,5 @@ these methods, we first validated whether the chosen move was legal for the play
 Once validation was complete, we performed the move by updating the player’s location,
 using the corresponding ticket, and modifying the relevant player attributes before returning a
 new game state.
+
+Run cw-model/src/main/java/uk/ac/bris/cs/scotlandyard/Main.java to play the game
